@@ -145,7 +145,7 @@ const slidesData = [
     icon: Calendar,
     primaryCta: { label: 'Book Appointment', to: '/book' },
     secondaryCta: { label: 'Find a Doctor', to: '/doctors' },
-    glow: 'bg-teal-400/20',
+    glow: 'bg-teal-600/15',
     Card: BookingPreviewCard,
     trustChip: '500+ patients booked this month',
   },
@@ -163,7 +163,7 @@ const slidesData = [
     icon: Siren,
     primaryCta: { label: 'Request Emergency Help', to: '/emergency' },
     secondaryCta: { label: 'How Dispatch Works', to: '/emergency#how-it-works' },
-    glow: 'bg-rose-400/20',
+    glow: 'bg-rose-500/12',
     Card: EmergencyPreviewCard,
     trustChip: 'Avg. dispatch time: 6 minutes',
   },
@@ -181,7 +181,7 @@ const slidesData = [
     icon: HeartPulse,
     primaryCta: { label: 'View Checkup Packages', to: '/packages' },
     secondaryCta: { label: 'Talk to a Doctor', to: '/doctors' },
-    glow: 'bg-violet-400/20',
+    glow: 'bg-violet-500/12',
     Card: CheckupPreviewCard,
     trustChip: '1,200+ checkups completed',
   },
@@ -210,26 +210,69 @@ const HeroSection = () => {
 
   return (
     <section
-      className="relative overflow-hidden bg-[linear-gradient(135deg,_#022c22_0%,_#0f766e_48%,_#0d9488_100%)] py-20 text-white lg:py-28"
+      className="relative overflow-hidden bg-[#03211b] py-10 text-white lg:py-14"
       id="hero-section"
     >
+      {/* ---------- Layered background (deep, professional teal) ---------- */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(135%_130%_at_50%_-20%,#0b5148_0%,#073a33_45%,#04231d_100%)]" />
+      <div className="hero-aurora pointer-events-none absolute -left-40 -top-44 h-[34rem] w-[34rem] rounded-full bg-teal-600/20 blur-[140px]" />
+      <div className="hero-aurora-2 pointer-events-none absolute -right-40 top-0 h-[30rem] w-[30rem] rounded-full bg-emerald-700/20 blur-[140px]" />
+      <div className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.5)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.5)_1px,transparent_1px)] [background-size:60px_60px] [mask-image:radial-gradient(75%_65%_at_50%_0%,#000_15%,transparent_80%)]" />
+
       <style>{`
         @keyframes hero-rise {
-          from { opacity: 0; transform: translateY(14px); }
+          from { opacity: 0; transform: translateY(16px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        .hero-rise { animation: hero-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        @keyframes hero-rise-card {
+          from { opacity: 0; transform: translateY(24px) scale(0.97); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes aurora-drift {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(40px, 30px) scale(1.12); }
+        }
+        @keyframes aurora-drift-2 {
+          0%, 100% { transform: translate(0, 0) scale(1.05); }
+          50% { transform: translate(-36px, 24px) scale(0.95); }
+        }
+        .hero-aurora { animation: aurora-drift 16s ease-in-out infinite; }
+        .hero-aurora-2 { animation: aurora-drift-2 20s ease-in-out infinite; }
+        .hero-anim > * { opacity: 0; animation: hero-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        .hero-anim > *:nth-child(1) { animation-delay: 0.04s; }
+        .hero-anim > *:nth-child(2) { animation-delay: 0.12s; }
+        .hero-anim > *:nth-child(3) { animation-delay: 0.20s; }
+        .hero-anim > *:nth-child(4) { animation-delay: 0.28s; }
         @media (prefers-reduced-motion: reduce) {
-          .hero-rise { animation: none; }
+          .hero-aurora, .hero-aurora-2 { animation: none; }
+        }
+        .hero-anim-card { animation: hero-rise-card 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both; }
+        @media (prefers-reduced-motion: reduce) {
+          .hero-anim > *, .hero-anim-card { animation: none; opacity: 1; }
         }
       `}</style>
 
-      <div className="pointer-events-none absolute inset-0 opacity-10 [background-image:radial-gradient(#ffffff_1px,transparent_1px)] [background-size:20px_20px]" />
+      {/* Per-slide color accent — shifts hue as the carousel advances */}
       <div
-        className={`pointer-events-none absolute left-1/2 top-0 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/3 rounded-full blur-3xl transition-colors duration-700 ${slidesData[activeSlide].glow}`}
+        className={`pointer-events-none absolute right-0 top-1/4 h-[30rem] w-[30rem] translate-x-1/4 rounded-full blur-[120px] transition-colors duration-1000 ${slidesData[activeSlide].glow}`}
       />
 
       <div className="container-custom relative z-10">
+        {/* Top trust bar */}
+        <div className="mb-7 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-white/10 pb-4 text-sm text-teal-50/80">
+          <span className="flex items-center gap-2 font-semibold text-white">
+            <ShieldCheck className="h-4 w-4 text-emerald-300" /> NMC-registered clinicians
+          </span>
+          <span className="hidden h-4 w-px bg-white/15 sm:block" />
+          <span className="flex items-center gap-2">
+            <span className="text-amber-300">★★★★★</span> 4.9 from 2,300+ patients
+          </span>
+          <span className="hidden h-4 w-px bg-white/15 sm:block" />
+          <span className="flex items-center gap-2">
+            <Siren className="h-4 w-4 text-rose-300" /> 24/7 emergency dispatch
+          </span>
+        </div>
+
         <Carousel
           intervalMs={7000}
           onSlideChange={setActiveSlide}
@@ -237,11 +280,15 @@ const HeroSection = () => {
           slides={slidesData.map((slide, i) => {
             const Icon = slide.icon;
             const PreviewCard = slide.Card;
+            const active = i === activeSlide;
             return (
-              <div key={i} className="grid min-h-[420px] items-center gap-14 lg:grid-cols-[1.15fr_0.85fr] lg:gap-10">
-                {/* Copy */}
-                <div className="flex max-w-xl flex-col gap-6">
-                  <span className="hero-rise inline-flex items-center gap-1.5 self-start rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-teal-50">
+              <div key={i} className="grid min-h-[320px] items-center gap-9 lg:grid-cols-[1.15fr_0.85fr] lg:gap-12">
+                {/* Copy — remounts + staggers in when its slide becomes active */}
+                <div
+                  key={active ? `copy-on-${i}` : `copy-off-${i}`}
+                  className={`flex max-w-xl flex-col gap-5 ${active ? 'hero-anim' : ''}`}
+                >
+                  <span className="inline-flex items-center gap-1.5 self-start rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-teal-50">
                     <span className="relative flex h-2 w-2">
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                       <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
@@ -249,15 +296,15 @@ const HeroSection = () => {
                     {slide.badge}
                   </span>
 
-                  <h1 className="hero-rise font-display text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
+                  <h1 className="font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-[3.15rem]">
                     {slide.heading}
                   </h1>
 
-                  <p className="hero-rise max-w-lg text-lg leading-relaxed text-teal-50/90 sm:text-xl">
+                  <p className="max-w-lg text-base leading-relaxed text-teal-50/90 sm:text-lg">
                     {slide.subtitle}
                   </p>
 
-                  <div className="hero-rise mt-1 flex flex-col gap-4 sm:flex-row">
+                  <div className="mt-1 flex flex-col gap-4 sm:flex-row">
                     <Link to={slide.primaryCta.to} className="btn btn-accent btn-lg group">
                       <Icon className="h-5 w-5" /> {slide.primaryCta.label}
                       <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -272,10 +319,22 @@ const HeroSection = () => {
                 </div>
 
                 {/* Themed preview card — travels with its slide */}
-                <div className="hero-rise relative mx-auto w-full max-w-sm">
-                  <PreviewCard tokenNumber={tokenNumber} />
-                  <div className="absolute -left-4 -top-4 hidden rounded-xl border border-white/20 bg-teal-950/80 px-3 py-2 text-xs font-semibold text-teal-50 shadow-lg backdrop-blur sm:block">
+                <div
+                  key={active ? `card-on-${i}` : `card-off-${i}`}
+                  className={`relative mx-auto w-full max-w-sm ${active ? 'hero-anim-card' : ''}`}
+                >
+                  {/* soft glow + gradient ring behind the card for depth */}
+                  <div className="pointer-events-none absolute -inset-6 rounded-[2rem] bg-white/10 blur-2xl" />
+                  <div className="rounded-[1.4rem] bg-gradient-to-br from-white/20 via-white/5 to-transparent p-px shadow-2xl shadow-teal-950/60">
+                    <PreviewCard tokenNumber={tokenNumber} />
+                  </div>
+
+                  {/* floating accent pills */}
+                  <div className="absolute -left-4 -top-4 hidden rounded-xl border border-white/20 bg-teal-950/85 px-3 py-2 text-xs font-semibold text-teal-50 shadow-lg backdrop-blur sm:block">
                     {slide.trustChip}
+                  </div>
+                  <div className="absolute -bottom-4 -right-3 hidden items-center gap-1.5 rounded-xl border border-white/20 bg-white/95 px-3 py-2 text-xs font-bold text-teal-800 shadow-lg sm:flex">
+                    <ShieldCheck className="h-4 w-4 text-emerald-500" /> Verified &amp; secure
                   </div>
                 </div>
               </div>
@@ -325,13 +384,21 @@ const HeroSection = () => {
             ))}
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-teal-100">
-            {credentials.map((item) => (
-              <div key={item} className="flex items-center gap-1.5">
-                <Check className="h-4 w-4 text-emerald-300" strokeWidth={3} /> {item}
-              </div>
-            ))}
-          </div>
+        </div>
+
+        {/* ---------- Stats strip ---------- */}
+        <div className="mt-8 grid grid-cols-2 divide-white/10 rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-sm sm:grid-cols-4 sm:divide-x">
+          {[
+            { value: '10,000+', label: 'Appointments booked' },
+            { value: '120+', label: 'Specialist doctors' },
+            { value: '~6 min', label: 'Avg. emergency response' },
+            { value: '4.9/5', label: 'Patient rating' },
+          ].map((stat) => (
+            <div key={stat.label} className="px-5 py-3.5 text-center sm:text-left">
+              <p className="font-display text-xl font-bold text-white sm:text-2xl">{stat.value}</p>
+              <p className="mt-0.5 text-xs text-teal-100/70">{stat.label}</p>
+            </div>
+          ))}
         </div>
       </div>
     </section>
