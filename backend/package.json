@@ -6,20 +6,28 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "main": "node src/server.js",
-    "rahul": " nodemon src/server.js"
+    "dev": " nodemon src/server.js"
   },
   "keywords": [],
   "type": "module",
   "dependencies": {
     "@prisma/client": "^6.16.3",
     "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.6.2",
+    "express-validator": "^7.3.2",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.11.0",
+    "multer": "^2.2.0",
+    "nodemailer": "^9.0.5",
     "prisma": "^6.16.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/multer": "^2.2.0",
     "@types/node": "^26.1.2",
     "nodemon": "^3.1.14"
   }

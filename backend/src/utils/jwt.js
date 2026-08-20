@@ -1,24 +1,57 @@
-import jwt from "jsonwebtoken" 
-import { env } from "../config/env.js"
+import jwt from 'jsonwebtoken';
+import { ENV } from "../config/env.js";
 
+// Generate Access Token
+export const generateAccessToken = (payload) => {
+    return jwt.sign(payload, ENV.JWT_ACCESS_SECRET, {
+        expiresIn: ENV.JWT_ACCESS_EXPIRE || '15m',
+    });
+};
 
-export  const generateAccessToken=(payload)=>{
-   return jwt.sign(payload,env.JWT_ACCESS_SECRET,{
-         expiresIn:env.ACCESS_TOKEN_EXPIRES
-    })
-}
+// Generate Refresh Token
+export const generateRefreshToken = (payload) => {
+    return jwt.sign(payload, ENV.JWT_REFRESH_SECRET, {
+        expiresIn: ENV.JWT_REFRESH_EXPIRE || '7d',
+    });
+};
 
+// Verify Access Token
+export const verifyAccessToken = (token) => {
+    try {
+        return jwt.verify(token, ENV.JWT_ACCESS_SECRET);
+    } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            throw new Error('ACCESS_TOKEN_EXPIRED');
+        }
+        throw new Error('INVALID_ACCESS_TOKEN');
+    }
+};
 
-export const generateRefreshToken=(payload)=>{
-    return jwt.sign(payload,env.JWT_REFRESH_SECRET,{
-         expiresIn:env.REFRESH_TOKEN_EXPIRES
-    })
-}
+// Verify Refresh Token
+export const verifyRefreshToken = (token) => {
+    try {
+        return jwt.verify(token, ENV.JWT_REFRESH_SECRET);
+    } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            throw new Error('REFRESH_TOKEN_EXPIRED');
+        }
+        throw new Error('INVALID_REFRESH_TOKEN');
+    }
+};
 
-export const verifyACCESSTOKEN=(payload)=>{
-    return jwt.verify(token , env.JWT_ACCESS_SECRET)
-}
+// Decode Token
+export const decodeToken = (token) => {
+    try {
+        return jwt.decode(token);
+    } catch (error) {
+        return null;
+    }
+};
 
-export const verifyRefreshToken=(payload)=>{
-    return jwt.verify(token , env.JWT_REFRESH_SECRET)
-}
+export default {
+    generateAccessToken,
+    generateRefreshToken,
+    verifyAccessToken,
+    verifyRefreshToken,
+    decodeToken,
+};

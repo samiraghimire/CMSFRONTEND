@@ -1,64 +1,34 @@
-import { ZodError } from 'zod';
-import { errorResponse } from '../utils/js/response.js';
-import { MESSAGES } from '../constants/js/messages.js';
-import { STATUS_CODES } from '../constants/js/statusCodes.js';
+import { errorResponse } from "../utils/response.js";
+import { STATUS_CODES } from "../constans/statusCodes.js";
 
 export const validate = (schema) => {
-  return (req, res, next) => {
-    try {
-      const validatedData = schema.parse(req.body);
-      req.body = validatedData;
-      next();
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return errorResponse(
-          res,
-          MESSAGES.VALIDATION_ERROR,
-          STATUS_CODES.BAD_REQUEST,
-          error.errors.map((err) => err.message)
-        );
-      }
-      return errorResponse(res, error.message, STATUS_CODES.BAD_REQUEST);
-    }
-  };
-};
+    return (req, res, next) => {
+        try {
+            const result = schema.safeParse(req.body);
 
-export const validateQuery = (schema) => {
-  return (req, res, next) => {
-    try {
-      const validatedData = schema.parse(req.query);
-      req.query = validatedData;
-      next();
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return errorResponse(
-          res,
-          MESSAGES.VALIDATION_ERROR,
-          STATUS_CODES.BAD_REQUEST,
-          error.errors.map((err) => err.message)
-        );
-      }
-      return errorResponse(res, error.message, STATUS_CODES.BAD_REQUEST);
-    }
-  };
-};
+            if (!result.success) {
+                const formattedErrors = result.error.issues.map((issue) => ({
+                    field: issue.path.join("."),
+                    message: issue.message,
+                }));
 
-export const validateParams = (schema) => {
-  return (req, res, next) => {
-    try {
-      const validatedData = schema.parse(req.params);
-      req.params = validatedData;
-      next();
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return errorResponse(
-          res,
-          MESSAGES.VALIDATION_ERROR,
-          STATUS_CODES.BAD_REQUEST,
-          error.errors.map((err) => err.message)
-        );
-      }
-      return errorResponse(res, error.message, STATUS_CODES.BAD_REQUEST);
-    }
-  };
+                return errorResponse(
+                    res,
+                    "Validation failed",
+                    STATUS_CODES.UNPROCESSABLE_ENTITY,
+                    formattedErrors
+                );
+            }
+
+            // Replace request body with validated data
+            req.body = result.data;
+
+            next();
+
+        } catch (error) {
+            console.error("Validation error:", error);
+
+            next(error);
+        }
+    };
 };

@@ -1,23 +1,37 @@
-import { REFRESH_TOKEN_COOKIE_NAME,COOKIE_OPTIONS } from "../config/constants.js"
-import {env} from "../config/env.js"
+import { ENV } from "../config/env.js";
 
+export const setAccessTokenCookie = (res, accessToken) => {
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: ENV.COOKIE_SECURE,
+    sameSite: ENV.COOKIE_SAME_SITE,
+    domain: ENV.COOKIE_DOMAIN,
+    maxAge: 15 * 60 * 1000, // 15 minutes
+  });
+};
 
+export const setRefreshTokenCookie = (res, refreshToken) => {
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: ENV.COOKIE_SECURE,
+    sameSite: ENV.COOKIE_SAME_SITE,
+    domain: ENV.COOKIE_DOMAIN,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+};
 
-export const setRefreshTokenCookie=(res,token)=>{
-    res.cookie("refreshToken",token,{
-        httpOnly:true,
-        secure:env.NODE_ENV ==="production",
-        sameSite:"lax",
-        maxAge: 7*24*60*60*1000     
-    })
-}
+export const clearTokens = (res) => {
+  res.clearCookie("accessToken", {
+    httpOnly: true,
+    secure: ENV.COOKIE_SECURE,
+    sameSite: ENV.COOKIE_SAME_SITE,
+    domain: ENV.COOKIE_DOMAIN,
+  });
 
-// clear cokkie 
- export const clearRefretokenCookie =(res)=>{
-    res.clearCookie(REFRESH_TOKEN_COOKIE_NAME,COOKIE_OPTIONS)
-}
-
-
-// get refresh token from the cookies
-export  const getRefreshTokenFromCOOKIE=(req) =>{
-    return req.cookies?.[REFRESH_TOKEN_COOKIE_NAME] || null}
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: ENV.COOKIE_SECURE,
+    sameSite: ENV.COOKIE_SAME_SITE,
+    domain: ENV.COOKIE_DOMAIN,
+  });
+};

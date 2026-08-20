@@ -1,25 +1,129 @@
-import  {optional, z} from  "zod"
-import { Roles } from "../../constans/roles.js"
+import { z } from 'zod';
 
-export const registerSchema=z.object({
-    fullName:z.string().trim().min(3,"Fullname must be at least 3 characters"),
-    email:z.string().trim().email("Invalid email address"),
-    phone:z.string().trim().min(10,"phone number must be at least 10digits").max(15,"phone number cannot exceed 15 dgits ").optional(),
-    password:z.string().min(8, 'password must be at least 8 characters'),
-    role: z
-  .enum([
-    Roles.ADMIN,
-    Roles.DOCTOR,
-    Roles.PATIENT,
-    Roles.STAFF,
-  ])
-  .optional()
-})
+// Register Validation Schema
+export const registerSchema = z.object({
+    fullName: z.string()
+        .min(2, 'Full name must be at least 2 characters')
+        .max(100, 'Full name cannot exceed 100 characters')
+        .min(1, 'Full name is required'),
+    
+    email: z.string()
+        .email('Please enter a valid email')
+        .min(1, 'Email is required')
+        .transform(val => val.toLowerCase().trim()),
+    
+    phone: z.string()
+        .min(1, 'Phone number is required')
+        .regex(/^\+?[\d\s-]{10,}$/, 'Please enter a valid phone number'),
+    
+    password: z.string()
+        .min(8, 'Password must be at least 8 characters')
+        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 
+            'Password must contain at least one uppercase, one lowercase, and one number'),
+    
+    role: z.enum(['ADMIN', 'DOCTOR', 'PATIENT', 'RECEPTIONIST'])
+        .optional()
+        .default('PATIENT'),
+});
 
+// Login Validation Schema
+export const loginSchema = z.object({
+    email: z.string()
+        .email('Please enter a valid email')
+        .min(1, 'Email is required')
+        .transform(val => val.toLowerCase().trim()),
+    
+    password: z.string()
+        .min(1, 'Password is required'),
+});
 
+// Verify Email Validation Schema
+export const verifyEmailSchema = z.object({
+    email: z.string()
+        .email('Please enter a valid email')
+        .min(1, 'Email is required')
+        .transform(val => val.toLowerCase().trim()),
+    
+    otp: z.string()
+        .min(1, 'OTP is required')
+        .length(6, 'OTP must be 6 digits')
+        .regex(/^\d+$/, 'OTP must be numeric'),
+});
 
-export const loginSchema=z.object({
-  email:z.strin().trim().email("Invalid email address"),
-  password:z.string().min(8,"pasword mut be at least same as we used in the register"),
-  rememberMe:z.boolean().default(false),
-})
+// Resend Verification Validation Schema
+export const resendVerificationSchema = z.object({
+    email: z.string()
+        .email('Please enter a valid email')
+        .min(1, 'Email is required')
+        .transform(val => val.toLowerCase().trim()),
+});
+
+// Forgot Password Validation Schema
+export const forgotPasswordSchema = z.object({
+    email: z.string()
+        .email('Please enter a valid email')
+        .min(1, 'Email is required')
+        .transform(val => val.toLowerCase().trim()),
+});
+
+// Reset Password Validation Schema
+export const resetPasswordSchema = z.object({
+    email: z.string()
+        .email('Please enter a valid email')
+        .min(1, 'Email is required')
+        .transform(val => val.toLowerCase().trim()),
+    
+    otp: z.string()
+        .min(1, 'OTP is required')
+        .length(6, 'OTP must be 6 digits')
+        .regex(/^\d+$/, 'OTP must be numeric'),
+    
+    newPassword: z.string()
+        .min(8, 'Password must be at least 8 characters')
+        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 
+            'Password must contain at least one uppercase, one lowercase, and one number'),
+    
+    confirmPassword: z.string()
+        .min(1, 'Confirm password is required'),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+});
+
+// Change Password Validation Schema
+export const changePasswordSchema = z.object({
+    currentPassword: z.string()
+        .min(1, 'Current password is required'),
+    
+    newPassword: z.string()
+        .min(8, 'Password must be at least 8 characters')
+        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 
+            'Password must contain at least one uppercase, one lowercase, and one number'),
+    
+    confirmPassword: z.string()
+        .min(1, 'Confirm password is required'),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+});
+
+// Update Profile Validation Schema
+export const updateProfileSchema = z.object({
+    fullName: z.string()
+        .min(2, 'Full name must be at least 2 characters')
+        .max(100, 'Full name cannot exceed 100 characters')
+        .optional(),
+    
+    phoneNumber: z.string()
+        .regex(/^\+?[\d\s-]{10,}$/, 'Please enter a valid phone number')
+        .optional(),
+}).partial();
+
+// Update Role Validation Schema
+export const updateRoleSchema = z.object({
+    role: z.enum(['ADMIN', 'DOCTOR', 'PATIENT', 'RECEPTIONIST'], {
+        required_error: 'Role is required',
+        invalid_type_error: 'Invalid role selected',
+    }),
+});
+

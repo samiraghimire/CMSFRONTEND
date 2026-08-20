@@ -1,18 +1,34 @@
-export const MESSAGES={
-    // authentication
-    REGISTER_SUCCESS:"User regisered sucessfully",
-    LOGIN_SUCCESS:"User login successfully",
-    LOGOUT_SUCCESS:"User logout SUCCESSFULLY",
-    INVALID_CREDENTIALS:"Invalid email or password",
-    UNAUTHORIZED:"Unauthorized access",
-    FORBIDDEN:"Access denied",
-    EMAILALREADY_EXIST:"Email already exist",
-    PHONE_ALREADY_EXIST:"PHone ALready exist",
-    USER_NOT_FOUND:"User not found",
-    ACCOUNT_INACTIVE:"Account has beed inactive",
-    TOKEN_REFRESHED:"Token has been refreshed",
-    Invalid_REFRESH_TOKEN:"Invalid refresh token",
-    Invalid_ACCESSTOKEN_TOKEN:"invalid accessToken",
-    VALIDATION_FAILED:"Validation failed",
-    INTERNAL_SERVER_ERROR:"Internal server error"
-}
+export const MESSAGES = {
+    // Success Messages
+    USER_REGISTERED: 'User registered successfully',
+    USER_LOGGED_IN: 'User logged in successfully',
+    USER_LOGGED_OUT: 'User logged out successfully',
+    TOKEN_REFRESHED: 'Token refreshed successfully',
+    EMAIL_VERIFIED: 'Email verified successfully',
+    PASSWORD_RESET_SENT: 'Password reset email sent successfully',
+    PASSWORD_RESET: 'Password reset successfully',
+    PROFILE_UPDATED: 'Profile updated successfully',
+    USER_FETCHED: 'User fetched successfully',
+    OTP_SENT: 'OTP sent successfully',
+    OTP_VERIFIED: 'OTP verified successfully',
+   
+    // Error Messages
+    USER_NOT_FOUND: 'User not found',
+    EMAIL_ALREADY_EXIST: 'Email already exists',
+    PHONE_ALREADY_EXIST: 'Phone number already exists',
+    USER_ALREADY_EXISTS: 'User already exists',
+    INVALID_CREDENTIALS: 'Invalid email or password',
+    INVALID_TOKEN: 'Invalid or expired token',
+    INVALID_REFRESH_TOKEN: 'Invalid refresh token',
+    EMAIL_NOT_VERIFIED: 'Please verify your email first',
+    ACCOUNT_DISABLED: 'Account is disabled',
+    UNAUTHORIZED: 'Unauthorized access',
+    FORBIDDEN: 'Forbidden access',
+    TOKEN_EXPIRED: 'Token expired',
+    OTP_EXPIRED: 'OTP has expired',
+    INVALID_OTP: 'Invalid OTP',
+    PASSWORD_MISMATCH: 'Passwords do not match',
+    EMAIL_ALREADY_VERIFIED: 'Email already verified',
+    SESSION_EXPIRED: 'Session expired',
+    INSUFFICIENT_PERMISSIONS: 'Insufficient permissions',
+};
