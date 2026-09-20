@@ -1,36 +1,41 @@
 import * as doctorService from './doctor.service.js';
-import { 
-  successResponse, 
+import {
+  successResponse,
   errorResponse,
   createdResponse,
   notFoundResponse,
   conflictResponse,
-  handleZodError,
 } from '../../utils/response.js';
-import { MESSAGES } from '../../constans/messages.js';
 
 // ==================== CREATE DOCTOR ====================
 export const createDoctor = async (req, res) => {
   try {
-    const doctor = await doctorService.createDoctor(req.body);
+    // req.files is an object with field names: { profilePicture: [...], certificates: [...] }
+    const doctor = await doctorService.createDoctor(req.body, req.files || {});
     return createdResponse(res, doctor, 'Doctor created successfully');
   } catch (error) {
     console.error('Create doctor error:', error);
-    
-    if (error.message === 'User not found') {
-      return notFoundResponse(res, error.message);
-    }
-    if (error.message === 'Doctor profile already exists for this user') {
-      return conflictResponse(res, error.message);
-    }
-    if (error.message === 'User is already registered as a patient') {
-      return conflictResponse(res, error.message);
-    }
-    if (error.message === 'License number already exists') {
-      return conflictResponse(res, error.message);
-    }
-    
+    if (error.message === 'User not found') return notFoundResponse(res, error.message);
+    if (error.message === 'Doctor profile already exists for this user') return conflictResponse(res, error.message);
+    if (error.message === 'User is already registered as a patient') return conflictResponse(res, error.message);
+    if (error.message === 'License number already exists') return conflictResponse(res, error.message);
     return errorResponse(res, error.message || 'Failed to create doctor');
+  }
+};
+
+export const submitDoctorOnboarding = async (req, res) => {
+  try {
+    const doctor = await doctorService.createDoctor({ ...req.body, userId: req.user.id }, req.files || {});
+    return createdResponse(res, doctor, 'Doctor documents submitted for review');
+  } catch (error) {
+    console.error('Doctor onboarding error:', error);
+    if (error.message === 'Doctor profile already exists for this user') return conflictResponse(res, error.message);
+    if (error.message === 'License number already exists') return conflictResponse(res, error.message);
+    if (error.message === 'Department not found') return notFoundResponse(res, error.message);
+    if (error.message === 'CLOUDINARY_UPLOAD_FAILED') {
+      return errorResponse(res, 'File storage is temporarily unavailable. Please try again later or contact support.', 503);
+    }
+    return errorResponse(res, error.message || 'Failed to submit doctor documents');
   }
 };
 
@@ -39,9 +44,7 @@ export const getAllDoctors = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const search = req.query.search;
-    const specialization = req.query.specialization;
-    const hospital = req.query.hospital;
+    const { search, specialization, hospital } = req.query;
     const minRating = req.query.minRating ? parseFloat(req.query.minRating) : null;
 
     const result = await doctorService.getAllDoctors(page, limit, search, specialization, hospital, minRating);
@@ -60,9 +63,7 @@ export const getDoctorById = async (req, res) => {
     return successResponse(res, doctor, 'Doctor fetched successfully');
   } catch (error) {
     console.error('Get doctor by ID error:', error);
-    if (error.message === 'Doctor not found') {
-      return notFoundResponse(res, error.message);
-    }
+    if (error.message === 'Doctor not found') return notFoundResponse(res, error.message);
     return errorResponse(res, error.message || 'Failed to get doctor');
   }
 };
@@ -74,10 +75,8 @@ export const getDoctorByUserId = async (req, res) => {
     const doctor = await doctorService.getDoctorByUserId(userId);
     return successResponse(res, doctor, 'Doctor fetched successfully');
   } catch (error) {
-    console.error('Get doctor by user ID error:', error);
-    if (error.message === 'Doctor not found for this user') {
-      return notFoundResponse(res, error.message);
-    }
+    console.error('Get doctor by userId error:', error);
+    if (error.message === 'Doctor not found for this user') return notFoundResponse(res, error.message);
     return errorResponse(res, error.message || 'Failed to get doctor');
   }
 };
@@ -86,16 +85,13 @@ export const getDoctorByUserId = async (req, res) => {
 export const updateDoctor = async (req, res) => {
   try {
     const { id } = req.params;
-    const doctor = await doctorService.updateDoctor(id, req.body);
+    // req.files is an object: { profilePicture: [...], certificates: [...] }
+    const doctor = await doctorService.updateDoctor(id, req.body, req.files || {});
     return successResponse(res, doctor, 'Doctor updated successfully');
   } catch (error) {
     console.error('Update doctor error:', error);
-    if (error.message === 'Doctor not found') {
-      return notFoundResponse(res, error.message);
-    }
-    if (error.message === 'License number already exists') {
-      return conflictResponse(res, error.message);
-    }
+    if (error.message === 'Doctor not found') return notFoundResponse(res, error.message);
+    if (error.message === 'License number already exists') return conflictResponse(res, error.message);
     return errorResponse(res, error.message || 'Failed to update doctor');
   }
 };
@@ -108,9 +104,7 @@ export const deleteDoctor = async (req, res) => {
     return successResponse(res, null, result.message);
   } catch (error) {
     console.error('Delete doctor error:', error);
-    if (error.message === 'Doctor not found') {
-      return notFoundResponse(res, error.message);
-    }
+    if (error.message === 'Doctor not found') return notFoundResponse(res, error.message);
     return errorResponse(res, error.message || 'Failed to delete doctor');
   }
 };
@@ -126,15 +120,9 @@ export const rateDoctor = async (req, res) => {
     return successResponse(res, doctor, 'Doctor rated successfully');
   } catch (error) {
     console.error('Rate doctor error:', error);
-    if (error.message === 'Doctor not found') {
-      return notFoundResponse(res, error.message);
-    }
-    if (error.message === 'Patient not found') {
-      return notFoundResponse(res, error.message);
-    }
-    if (error.message === 'You can only rate doctors after a completed appointment') {
-      return errorResponse(res, error.message, 400);
-    }
+    if (error.message === 'Doctor not found') return notFoundResponse(res, error.message);
+    if (error.message === 'Patient not found') return notFoundResponse(res, error.message);
+    if (error.message === 'You can only rate doctors after a completed appointment') return errorResponse(res, error.message, 400);
     return errorResponse(res, error.message || 'Failed to rate doctor');
   }
 };
@@ -147,9 +135,7 @@ export const getDoctorStatistics = async (req, res) => {
     return successResponse(res, stats, 'Doctor statistics fetched successfully');
   } catch (error) {
     console.error('Get doctor statistics error:', error);
-    if (error.message === 'Doctor not found') {
-      return notFoundResponse(res, error.message);
-    }
+    if (error.message === 'Doctor not found') return notFoundResponse(res, error.message);
     return errorResponse(res, error.message || 'Failed to get doctor statistics');
   }
 };
@@ -162,9 +148,7 @@ export const getDoctorAvailability = async (req, res) => {
     return successResponse(res, availability, 'Doctor availability fetched successfully');
   } catch (error) {
     console.error('Get doctor availability error:', error);
-    if (error.message === 'Doctor not found') {
-      return notFoundResponse(res, error.message);
-    }
+    if (error.message === 'Doctor not found') return notFoundResponse(res, error.message);
     return errorResponse(res, error.message || 'Failed to get doctor availability');
   }
 };

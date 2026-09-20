@@ -2,184 +2,222 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { uploadToCloudinary, uploadMulterToCloudinary, deleteFromCloudinary } from './cloudinary.js';
+import { ENV } from './env.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Ensure upload directories exist
-const uploadDir = path.join(__dirname, '../../uploads');
-const patientDir = path.join(uploadDir, 'patients');
-const doctorDir = path.join(uploadDir, 'doctors');
-const documentsDir = path.join(uploadDir, 'documents');
-
-const directories = [uploadDir, patientDir, doctorDir, documentsDir];
-directories.forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+// ==================== TEMP DISK STORAGE ====================
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../../uploads/temp');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
 });
 
-// File filter
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx|txt/;
+// ==================== FILE FILTERS ====================
+
+// Images only (for avatars/profile photos)
+const imageFilter = (req, file, cb) => {
+  const allowedTypes = /jpeg|jpg|png|gif|webp/;
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
   const mimetype = allowedTypes.test(file.mimetype);
-
-  if (mimetype && extname) {
-    return cb(null, true);
-  } else {
-    cb(new Error('Only images, PDFs, and documents are allowed'));
-  }
+  if (mimetype && extname) return cb(null, true);
+  cb(new Error('Only image files (jpeg, jpg, png, gif, webp) are allowed'));
 };
 
-// Generate unique filename
-const generateFilename = (file) => {
-  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-  return uniqueSuffix + path.extname(file.originalname);
+// Documents + Images (for medical reports, certificates)
+const documentFilter = (req, file, cb) => {
+  const allowedTypes = /jpeg|jpg|png|gif|webp|pdf|doc|docx|txt|xlsx|xls/;
+  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = /image\/|application\/pdf|application\/msword|application\/vnd|text\/plain/.test(file.mimetype);
+  if (extname && mimetype) return cb(null, true);
+  cb(new Error('Only images, PDFs, and documents are allowed'));
 };
 
-// Storage configuration for patient documents
-export const patientStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, patientDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, generateFilename(file));
-  }
-});
+// ==================== MULTER UPLOAD INSTANCES ====================
 
-// Storage configuration for doctor documents
-export const doctorStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, doctorDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, generateFilename(file));
-  }
-});
+// Single avatar/profile picture (5MB, images only)
+export const uploadAvatar = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: imageFilter,
+}).single('avatar');
 
-// Storage configuration for general documents
-export const documentStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, documentsDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, generateFilename(file));
-  }
-});
+// Single file upload for reports (10MB, docs+images)
+export const uploadSingle = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: documentFilter,
+}).single('file');
 
-// ==================== UPLOAD CONFIGURATIONS ====================
+// Multiple files (up to 5, 10MB each) — used for patient documents
+export const uploadMultiple = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: documentFilter,
+}).array('files', 5);
 
-// Single file upload (profile picture)
-export const uploadProfilePicture = multer({
-  storage: patientStorage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
-  },
-  fileFilter,
-}).single('profilePicture');
+// Multiple files (up to 10, 10MB each) — used for doctor certificates
+export const uploadMultipleLarge = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: documentFilter,
+}).array('files', 10);
 
-// Single file upload (doctor certificate)
-export const uploadCertificate = multer({
-  storage: doctorStorage,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-  },
-  fileFilter,
-}).single('certificate');
+// Named fields upload — profile picture + multiple documents
+export const uploadFields = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: documentFilter,
+}).fields([
+  { name: 'avatar', maxCount: 1 },
+  { name: 'profilePicture', maxCount: 1 },
+  { name: 'documents', maxCount: 5 },
+  { name: 'certificates', maxCount: 10 },
+  { name: 'reportFile', maxCount: 1 },
+]);
 
-// Single file upload (medical document)
-export const uploadMedicalDocument = multer({
-  storage: documentStorage,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-  },
-  fileFilter,
-}).single('document');
+// ==================== CLOUDINARY HELPER FUNCTIONS ====================
 
-// Multiple files upload (multiple documents)
-export const uploadMultipleDocuments = multer({
-  storage: documentStorage,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit per file
-  },
-  fileFilter,
-}).array('documents', 5); // Max 5 files
-
-// Multiple files upload (patient documents)
-export const uploadPatientDocuments = multer({
-  storage: patientStorage,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit per file
-  },
-  fileFilter,
-}).array('documents', 10); // Max 10 files
-
-// ==================== ERROR HANDLING ====================
-
-export const handleMulterError = (err, req, res, next) => {
-  if (err instanceof multer.MulterError) {
-    if (err.code === 'FILE_TOO_LARGE') {
-      return res.status(413).json({
-        success: false,
-        message: 'File too large. Maximum file size is 10MB.',
-      });
-    }
-    if (err.code === 'LIMIT_FILE_COUNT') {
-      return res.status(400).json({
-        success: false,
-        message: 'Too many files uploaded. Maximum allowed is 5.',
-      });
-    }
-    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-      return res.status(400).json({
-        success: false,
-        message: 'Unexpected file field.',
-      });
-    }
-    return res.status(400).json({
-      success: false,
-      message: `Upload error: ${err.message}`,
-    });
-  }
-  
-  if (err.message === 'Only images, PDFs, and documents are allowed') {
-    return res.status(400).json({
-      success: false,
-      message: err.message,
-    });
-  }
-  
-  next(err);
-};
-
-// ==================== FILE HELPER FUNCTIONS ====================
-
-export const getFileUrl = (req, filename) => {
-  if (!filename) return null;
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
-  return `${baseUrl}/uploads/${path.basename(filename)}`;
-};
-
-export const deleteFile = (filepath) => {
+// Clean up local temp file after upload
+const cleanupTempFile = (filePath) => {
   try {
-    if (fs.existsSync(filepath)) {
-      fs.unlinkSync(filepath);
-      return true;
+    if (filePath && fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
     }
-    return false;
-  } catch (error) {
-    console.error('Error deleting file:', error);
-    return false;
+  } catch (err) {
+    console.error('Failed to cleanup temp file:', err.message);
   }
 };
 
-export const getFileInfo = (filename) => {
-  if (!filename) return null;
+const saveLocalUpload = (file, folder) => {
+  const uploadDir = path.join(__dirname, '../../uploads', folder);
+  fs.mkdirSync(uploadDir, { recursive: true });
+  const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
+  const destination = path.join(uploadDir, filename);
+  fs.copyFileSync(file.path, destination);
+  cleanupTempFile(file.path);
   return {
-    filename: path.basename(filename),
-    size: fs.statSync(filename)?.size || 0,
-    ext: path.extname(filename),
-    path: filename,
+    publicId: null,
+    url: `/uploads/${folder}/${filename}`,
+    format: path.extname(file.originalname).slice(1),
+    size: file.size,
+    width: null,
+    height: null,
+    originalName: file.originalname,
+    uploadedAt: new Date().toISOString(),
+    storage: 'local-development',
   };
+};
+
+/**
+ * Upload a single file to Cloudinary and clean up temp.
+ * @param {object} file  - Multer file object
+ * @param {string} folder - Cloudinary folder
+ * @param {object} options - Extra Cloudinary options
+ * @returns {{ publicId, url, format, size, width, height }}
+ */
+export const uploadToCloudinarySingle = async (file, folder = 'healthcare', options = {}) => {
+  if (!file) throw new Error('No file provided');
+
+  try {
+    const result = await uploadToCloudinary(file, {
+      folder,
+      resource_type: 'auto',
+      ...options,
+    });
+
+    cleanupTempFile(file.path);
+
+    return {
+      publicId: result.public_id,
+      url: result.secure_url,
+      format: result.format,
+      size: result.bytes,
+      width: result.width || null,
+      height: result.height || null,
+      originalName: file.originalname,
+      uploadedAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    if (ENV.NODE_ENV !== 'production') {
+      console.warn('[Uploads] Cloudinary unavailable; using local development storage.');
+      return saveLocalUpload(file, folder.replace(/[^a-z0-9-]/gi, '-'));
+    }
+    cleanupTempFile(file.path);
+    console.error('Cloudinary single upload error:', error.cause || error.message);
+    throw error;
+  }
+};
+
+/**
+ * Upload multiple files to Cloudinary and clean up temps.
+ * @param {object[]} files  - Array of Multer file objects
+ * @param {string} folder - Cloudinary folder
+ * @param {object} options - Extra Cloudinary options
+ * @returns {Array<{ publicId, url, format, size, width, height }>}
+ */
+export const uploadMultipleToCloudinaryFn = async (files, folder = 'healthcare', options = {}) => {
+  if (!files || files.length === 0) return [];
+
+  try {
+    const results = await uploadMulterToCloudinary(files, {
+      folder,
+      resource_type: 'auto',
+      ...options,
+    });
+
+    files.forEach((file) => cleanupTempFile(file.path));
+
+    return results.map((result, index) => ({
+      publicId: result.public_id,
+      url: result.secure_url,
+      format: result.format,
+      size: result.bytes,
+      width: result.width || null,
+      height: result.height || null,
+      originalName: files[index]?.originalname || '',
+      uploadedAt: new Date().toISOString(),
+    }));
+  } catch (error) {
+    if (ENV.NODE_ENV !== 'production') {
+      console.warn('[Uploads] Cloudinary unavailable; using local development storage.');
+      return files.map((file) => saveLocalUpload(file, folder.replace(/[^a-z0-9-]/gi, '-')));
+    }
+    files.forEach((file) => cleanupTempFile(file.path));
+    console.error('Cloudinary multiple upload error:', error.cause || error.message);
+    throw error;
+  }
+};
+
+/**
+ * Delete a file from Cloudinary by its public_id.
+ * @param {string} publicId
+ */
+export const deleteFromCloudinaryFn = async (publicId) => {
+  if (!publicId) return null;
+  try {
+    return await deleteFromCloudinary(publicId);
+  } catch (error) {
+    console.error('Cloudinary delete error:', error);
+    throw new Error('Failed to delete file from Cloudinary');
+  }
+};
+
+/**
+ * Delete multiple files from Cloudinary.
+ * @param {string[]} publicIds
+ */
+export const deleteMultipleFromCloudinary = async (publicIds = []) => {
+  if (!publicIds || publicIds.length === 0) return;
+  await Promise.allSettled(publicIds.map((id) => deleteFromCloudinaryFn(id)));
 };

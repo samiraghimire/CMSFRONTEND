@@ -6,6 +6,8 @@ import Topbar from './Topbar';
 import {
   LayoutDashboard,
   Stethoscope,
+  Building2,
+  UsersRound,
   BarChart3,
   Settings,
 } from 'lucide-react';
@@ -13,6 +15,8 @@ import {
 const navItems = [
   { to: '/admin', label: 'Overview', icon: LayoutDashboard, end: true },
   { to: '/admin/doctors', label: 'Doctors', icon: Stethoscope },
+  { to: '/admin/departments', label: 'Departments', icon: Building2 },
+  { to: '/admin/staff', label: 'Staff accounts', icon: UsersRound },
   { to: '/admin/reports', label: 'Reports', icon: BarChart3 },
   { to: '/admin/settings', label: 'Settings', icon: Settings },
 ];
@@ -20,6 +24,8 @@ const navItems = [
 const titles = {
   '/admin': { title: 'Admin Overview', subtitle: "Today's clinic activity at a glance" },
   '/admin/doctors': { title: 'Doctors', subtitle: 'Specialists, availability and load' },
+  '/admin/departments': { title: 'Departments', subtitle: 'Create and manage care departments' },
+  '/admin/staff': { title: 'Staff accounts', subtitle: 'Provision and manage clinic staff access' },
   '/admin/reports': { title: 'Reports', subtitle: 'Revenue and operational insights' },
   '/admin/settings': { title: 'Settings', subtitle: 'Clinic profile and preferences' },
 };

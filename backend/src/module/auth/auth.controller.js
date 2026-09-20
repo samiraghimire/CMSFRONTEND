@@ -1,7 +1,7 @@
 import * as authService from './auth.service.js';
-import { 
-    successResponse, 
-    createdResponse, 
+import {
+    successResponse,
+    createdResponse,
     errorResponse,
     unauthorizedResponse,
     forbiddenResponse,
@@ -10,10 +10,12 @@ import {
     serverErrorResponse,
     handleZodError
 } from '../../utils/response.js';
+import { uploadToCloudinarySingle, deleteFromCloudinaryFn } from '../../config/multer.js';
 import { setAccessTokenCookie, setRefreshTokenCookie, clearTokens } from '../../utils/cookie.js';
 import { 
     registerSchema, 
-    loginSchema, 
+    loginSchema,
+    adminLoginSchema,
     verifyEmailSchema,
     resendVerificationSchema,
     forgotPasswordSchema,
@@ -95,18 +97,85 @@ export const login = async (req, res) => {
         if (error.message === MESSAGES.ACCOUNT_DISABLED) {
             return forbiddenResponse(res, error.message);
         }
+        if (error.message === 'EMAIL_NOT_VERIFIED') {
+            return forbiddenResponse(res, 'Please verify your email before signing in.');
+        }
         
         return errorResponse(res, error.message || 'Login failed');
+    }
+};
+
+export const adminLogin = async (req, res) => {
+    try {
+        const validatedData = await adminLoginSchema.parseAsync(req.body);
+        const result = await authService.initiateAdminLogin(
+            validatedData.email,
+            validatedData.password
+        );
+        return successResponse(res, result, result.message || MESSAGES.OTP_SENT);
+    } catch (error) {
+        console.error('Admin login error:', error);
+
+        if (error.name === 'ZodError') {
+            return handleZodError(res, error);
+        }
+        if (error.message === MESSAGES.INVALID_CREDENTIALS) {
+            return unauthorizedResponse(res, error.message);
+        }
+        if (error.message === MESSAGES.ACCOUNT_DISABLED) {
+            return forbiddenResponse(res, error.message);
+        }
+        if (error.message.includes('Please wait')) {
+            return errorResponse(res, error.message, 429);
+        }
+
+        return errorResponse(res, error.message || 'Admin login failed');
+    }
+};
+
+export const verifyAdminLogin = async (req, res) => {
+    try {
+        const validatedData = await verifyEmailSchema.parseAsync(req.body);
+        const userAgent = req.get('User-Agent');
+        const ipAddress = req.ip || req.connection.remoteAddress;
+        const result = await authService.completeAdminLogin(
+            validatedData.email,
+            validatedData.otp,
+            userAgent,
+            ipAddress
+        );
+
+        setAccessTokenCookie(res, result.accessToken);
+        setRefreshTokenCookie(res, result.refreshToken);
+
+        return successResponse(res, {
+            user: result.user,
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken,
+        }, MESSAGES.USER_LOGGED_IN);
+    } catch (error) {
+        console.error('Verify admin login error:', error);
+
+        if (error.name === 'ZodError') {
+            return handleZodError(res, error);
+        }
+        if (error.message === MESSAGES.INVALID_OTP || error.message === MESSAGES.OTP_EXPIRED) {
+            return errorResponse(res, error.message, 400);
+        }
+
+        return unauthorizedResponse(res, error.message || 'Admin verification failed');
     }
 };
 
 // Logout User
 export const logout = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user?.id;
         const accessToken = req.cookies?.accessToken;
 
-        await authService.logoutUser(userId, accessToken);
+        if (userId) {
+            await authService.logoutUser(userId, accessToken);
+        }
         clearTokens(res);
 
         return successResponse(res, null, MESSAGES.USER_LOGGED_OUT);
@@ -308,25 +377,68 @@ export const updateProfile = async (req, res) => {
     try {
         const validatedData = await updateProfileSchema.parseAsync(req.body);
         const userId = req.user.id;
-        
-        const user = await authService.updateUserProfile(userId, validatedData);
-        
+
+        // Handle avatar upload if file present
+        let avatarData = null;
+        if (req.file) {
+            avatarData = await uploadToCloudinarySingle(req.file, 'healthcare/avatars');
+        }
+
+        const updatePayload = {
+            ...validatedData,
+            ...(avatarData && { avatar: avatarData.url }),
+        };
+
+        const user = await authService.updateUserProfile(userId, updatePayload);
+
         return successResponse(res, user, MESSAGES.PROFILE_UPDATED);
     } catch (error) {
         console.error('Update profile error:', error);
-        
+
         if (error.name === 'ZodError') {
             return handleZodError(res, error);
         }
-        
         if (error.message === 'Phone number already exists') {
             return conflictResponse(res, error.message);
         }
         if (error.message === MESSAGES.USER_NOT_FOUND) {
             return notFoundResponse(res, error.message);
         }
-        
+
         return errorResponse(res, error.message || 'Failed to update profile');
+    }
+};
+
+// Upload / Replace Avatar
+export const uploadAvatar = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        if (!req.file) {
+            return errorResponse(res, 'No avatar file provided', 400);
+        }
+
+        // Get current user to delete old avatar
+        const currentUser = await authService.getUserProfile(userId);
+        if (currentUser.avatar) {
+            // Try to extract public_id from old avatar URL and delete it
+            try {
+                const urlParts = currentUser.avatar.split('/');
+                const publicIdWithExt = urlParts.slice(-2).join('/');
+                const publicId = publicIdWithExt.split('.')[0];
+                await deleteFromCloudinaryFn(publicId);
+            } catch (e) {
+                console.error('Could not delete old avatar:', e.message);
+            }
+        }
+
+        const avatarData = await uploadToCloudinarySingle(req.file, 'healthcare/avatars');
+        const user = await authService.updateUserProfile(userId, { avatar: avatarData.url });
+
+        return successResponse(res, { avatar: avatarData.url, user }, 'Avatar updated successfully');
+    } catch (error) {
+        console.error('Upload avatar error:', error);
+        return errorResponse(res, error.message || 'Failed to upload avatar');
     }
 };
 

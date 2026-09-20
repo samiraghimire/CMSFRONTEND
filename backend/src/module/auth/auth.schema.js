@@ -1,29 +1,38 @@
 import { z } from 'zod';
 
-// Register Validation Schema
+// Register Validation Schema — public patient and doctor signup.
 export const registerSchema = z.object({
     fullName: z.string()
         .min(2, 'Full name must be at least 2 characters')
         .max(100, 'Full name cannot exceed 100 characters')
         .min(1, 'Full name is required'),
-    
+
     email: z.string()
         .email('Please enter a valid email')
         .min(1, 'Email is required')
         .transform(val => val.toLowerCase().trim()),
-    
+
     phone: z.string()
         .min(1, 'Phone number is required')
         .regex(/^\+?[\d\s-]{10,}$/, 'Please enter a valid phone number'),
-    
+
     password: z.string()
         .min(8, 'Password must be at least 8 characters')
-        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 
+        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
             'Password must contain at least one uppercase, one lowercase, and one number'),
-    
-    role: z.enum(['ADMIN', 'DOCTOR', 'PATIENT', 'RECEPTIONIST'])
+
+    confirmPassword: z.string()
+        .min(1, 'Confirm password is required'),
+
+    role: z
+        .enum(['PATIENT', 'DOCTOR'], {
+            invalid_type_error: 'Choose either Patient or Doctor.',
+        })
         .optional()
         .default('PATIENT'),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
 });
 
 // Login Validation Schema
@@ -36,6 +45,8 @@ export const loginSchema = z.object({
     password: z.string()
         .min(1, 'Password is required'),
 });
+
+export const adminLoginSchema = loginSchema;
 
 // Verify Email Validation Schema
 export const verifyEmailSchema = z.object({
